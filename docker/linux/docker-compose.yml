@@ -1,0 +1,67 @@
+# ============================================
+# ONLYOFFICE Document Server - Linux 基础配置
+# 
+# 使用方法:
+#   内网: docker-compose -f docker-compose.yml -f docker-compose.intranet.yml up -d
+#   外网: docker-compose -f docker-compose.yml -f docker-compose.internet.yml up -d
+# ============================================
+
+version: '3.8'
+
+services:
+  # ONLYOFFICE Document Server
+  onlyoffice:
+    image: onlyoffice/documentserver:latest
+    container_name: onlyoffice-document-server
+    restart: unless-stopped
+    
+    # 环境变量配置
+    environment:
+      # JWT 认证配置
+      - JWT_ENABLED=true
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-key-change-in-production}
+      - JWT_HEADER=Authorization
+      - JWT_IN_BODY=true
+      
+      # 安全配置
+      - SECURE_LINK_SECRET=${JWT_SECRET:-your-super-secret-key-change-in-production}
+      
+      # 性能配置
+      - DS_LOG_LEVEL=${LOG_LEVEL:-info}
+    
+    # 数据卷挂载
+    volumes:
+      # 日志持久化
+      - onlyoffice_logs:/var/log/onlyoffice
+      # 数据持久化
+      - onlyoffice_data:/var/www/onlyoffice/Data
+      # 缓存持久化
+      - onlyoffice_cache:/var/lib/onlyoffice
+      # 字体目录（可选，用于自定义字体）
+      # - ./fonts:/usr/share/fonts/custom
+    
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # 网络配置
+    networks:
+      - onlyoffice_network
+
+# 数据卷定义
+volumes:
+  onlyoffice_logs:
+    driver: local
+  onlyoffice_data:
+    driver: local
+  onlyoffice_cache:
+    driver: local
+
+# 网络定义
+networks:
+  onlyoffice_network:
+    driver: bridge

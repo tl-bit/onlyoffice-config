@@ -1,0 +1,95 @@
+# ============================================
+# ONLYOFFICE Document Server - Linux 外网环境配置
+# 
+# 适用场景:
+#   - 公网服务器部署
+#   - 需要域名访问
+#   - 建议启用 HTTPS
+#
+# 使用方法:
+#   HTTP:  docker-compose -f docker-compose.yml -f docker-compose.internet.yml up -d
+#   HTTPS: docker-compose -f docker-compose.yml -f docker-compose.internet.yml --profile https up -d
+#
+# 前置要求:
+#   - 已配置域名解析
+#   - HTTPS 需要 SSL 证书
+# ============================================
+
+version: '3.8'
+
+services:
+  onlyoffice:
+    # 外网环境不直接暴露端口，通过 Nginx 代理
+    # 如需直接访问，取消注释以下配置
+    # ports:
+    #   - "${ONLYOFFICE_PORT:-8080}:80"
+    
+    # 外网环境变量
+    environment:
+      # 外网安全配置
+      - ALLOW_PRIVATE_IP_ADDRESS=false
+      - ALLOW_META_IP_ADDRESS=false
+      
+      # WOPI 配置（可选，用于与其他系统集成）
+      # - WOPI_ENABLED=true
+    
+    networks:
+      - onlyoffice_network
+
+  # -------------------- Nginx 反向代理（HTTP）--------------------
+  # 外网 HTTP（仅用于测试，生产环境建议使用 HTTPS）
+  
+  nginx-http:
+    image: nginx:alpine
+    container_name: onlyoffice-nginx-http
+    restart: unless-stopped
+    profiles:
+      - http
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+    volumes:
+      - ../nginx/nginx.http.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      onlyoffice:
+        condition: service_healthy
+    networks:
+      - onlyoffice_network
+
+  # -------------------- Nginx 反向代理（HTTPS）--------------------
+  # 外网 HTTPS（推荐）
+  
+  nginx-https:
+    image: nginx:alpine
+    container_name: onlyoffice-nginx-https
+    restart: unless-stopped
+    profiles:
+      - https
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"      # HTTP 重定向到 HTTPS
+      - "${NGINX_HTTPS_PORT:-443}:443"   # HTTPS
+    volumes:
+      - ../nginx/nginx.https.conf:/etc/nginx/nginx.conf:ro
+      - ${SSL_CERT_PATH:-./certs/fullchain.pem}:/etc/nginx/ssl/fullchain.pem:ro
+      - ${SSL_KEY_PATH:-./certs/privkey.pem}:/etc/nginx/ssl/privkey.pem:ro
+    depends_on:
+      onlyoffice:
+        condition: service_healthy
+    networks:
+      - onlyoffice_network
+
+  # -------------------- 可选: Let's Encrypt 自动证书 --------------------
+  # 使用 Certbot 自动获取和续期 SSL 证书
+  
+  # certbot:
+  #   image: certbot/certbot
+  #   container_name: onlyoffice-certbot
+  #   profiles:
+  #     - certbot
+  #   volumes:
+  #     - ./certs:/etc/letsencrypt
+  #     - ./certbot-webroot:/var/www/certbot
+  #   entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+networks:
+  onlyoffice_network:
+    driver: bridge

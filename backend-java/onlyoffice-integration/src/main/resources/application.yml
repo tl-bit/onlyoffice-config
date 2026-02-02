@@ -1,0 +1,92 @@
+# ============================================
+# ONLYOFFICE 集成服务配置
+# ============================================
+
+server:
+  # 服务端口（如被占用请修改）
+  port: ${BACKEND_PORT:3000}
+  
+  servlet:
+    # 上下文路径（可选）
+    context-path: /
+
+spring:
+  application:
+    name: onlyoffice-integration
+  
+  servlet:
+    multipart:
+      # 最大文件大小
+      max-file-size: ${MAX_FILE_SIZE:100MB}
+      max-request-size: ${MAX_FILE_SIZE:100MB}
+
+# ============================================
+# ONLYOFFICE 配置
+# ============================================
+onlyoffice:
+  # ----- 文档服务器配置 -----
+  document-server:
+    # 前端访问地址（浏览器使用）
+    # 内网示例: http://192.168.1.100:8080
+    # 外网示例: https://docs.example.com
+    url: ${DOCUMENT_SERVER_URL:http://localhost:8080}
+    
+    # 内部访问地址（后端使用，可选）
+    internal-url: ${DOCUMENT_SERVER_INTERNAL_URL:}
+  
+  # ----- 后端服务配置 -----
+  backend:
+    # 后端服务地址（ONLYOFFICE 回调使用）
+    # 内网示例: http://192.168.1.100:3000
+    # 外网示例: https://api.example.com
+    url: ${BACKEND_URL:http://localhost:3000}
+    
+    # 回调地址（Docker 容器访问宿主机）
+    # Windows Docker: http://host.docker.internal:3000
+    # Linux Docker: http://宿主机IP:3000
+    callback-url: ${BACKEND_CALLBACK_URL:http://host.docker.internal:3000}
+  
+  # ----- JWT 配置 -----
+  jwt:
+    # JWT 密钥（必须与 ONLYOFFICE 配置一致）
+    # 生产环境请使用强密码
+    secret: ${JWT_SECRET:my-local-secret}
+    
+    # Token 过期时间（秒）
+    expires-in: ${JWT_EXPIRES_IN:3600}
+    
+    # JWT Header 名称
+    header: Authorization
+  
+  # ----- 文件存储配置 -----
+  storage:
+    # 文档存储目录
+    upload-dir: ${UPLOAD_DIR:./uploads}
+    
+    # 允许的文件类型
+    allowed-types: ${ALLOWED_FILE_TYPES:docx,xlsx,pptx,doc,xls,ppt,odt,ods,odp,pdf}
+    
+    # 最大文件大小（字节）
+    max-size: ${MAX_FILE_SIZE_BYTES:104857600}
+
+# ============================================
+# 日志配置
+# ============================================
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}
+    com.example.onlyoffice: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: ${LOG_DIR:./logs}/onlyoffice-integration.log
+
+# ============================================
+# 跨域配置
+# ============================================
+cors:
+  # 允许的来源（生产环境请限制具体域名）
+  allowed-origins: ${CORS_ORIGINS:*}
+  allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+  allowed-headers: "*"
+  allow-credentials: true

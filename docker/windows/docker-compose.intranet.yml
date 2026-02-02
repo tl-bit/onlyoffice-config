@@ -1,0 +1,74 @@
+# ============================================
+# ONLYOFFICE Document Server - Windows 内网环境配置
+# 
+# 适用场景:
+#   - Windows Server 内网部署
+#   - 开发测试环境
+#   - 局域网访问
+#
+# 使用方法 (PowerShell):
+#   HTTP:  docker-compose -f docker-compose.yml -f docker-compose.intranet.yml up -d
+#   HTTPS: docker-compose -f docker-compose.yml -f docker-compose.intranet.yml --profile https up -d
+#
+# Windows 特殊说明:
+#   - Docker Desktop 自动支持 host.docker.internal
+#   - 回调地址使用 http://host.docker.internal:${BACKEND_PORT}
+# ============================================
+
+version: '3.8'
+
+services:
+  onlyoffice:
+    # 端口映射 - 内网直接暴露端口
+    ports:
+      - "${ONLYOFFICE_PORT:-8080}:80"
+    
+    # 内网环境变量
+    environment:
+      # 允许私有 IP 访问（内网必需）
+      - ALLOW_PRIVATE_IP_ADDRESS=true
+      - ALLOW_META_IP_ADDRESS=true
+    
+    # Windows Docker Desktop 自动支持 host.docker.internal
+    # 无需额外配置 extra_hosts
+    
+    networks:
+      - onlyoffice_network
+
+  # -------------------- 可选: Nginx 反向代理（HTTP）--------------------
+  
+  nginx-http:
+    image: nginx:alpine
+    container_name: onlyoffice-nginx-http
+    restart: unless-stopped
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+    volumes:
+      - ../nginx/nginx.http.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - onlyoffice
+    networks:
+      - onlyoffice_network
+
+  # -------------------- 可选: Nginx 反向代理（HTTPS）--------------------
+  
+  nginx-https:
+    image: nginx:alpine
+    container_name: onlyoffice-nginx-https
+    restart: unless-stopped
+    profiles:
+      - https
+    ports:
+      - "${NGINX_HTTPS_PORT:-443}:443"
+    volumes:
+      - ../nginx/nginx.https.conf:/etc/nginx/nginx.conf:ro
+      - ${SSL_CERT_PATH:-./certs/fullchain.pem}:/etc/nginx/ssl/fullchain.pem:ro
+      - ${SSL_KEY_PATH:-./certs/privkey.pem}:/etc/nginx/ssl/privkey.pem:ro
+    depends_on:
+      - onlyoffice
+    networks:
+      - onlyoffice_network
+
+networks:
+  onlyoffice_network:
+    driver: bridge

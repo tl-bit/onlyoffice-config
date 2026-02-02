@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+dist/
+
+# Java build output
+target/
+
+# Logs
+logs/
+*.log
+
+# Uploads
+uploads/
+
+# Environment files (keep examples)
+.env
+!.env.example
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# SSL certificates
+certs/
+*.pem
+*.key
+*.crt

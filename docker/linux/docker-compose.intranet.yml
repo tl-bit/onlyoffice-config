@@ -1,0 +1,83 @@
+# ============================================
+# ONLYOFFICE Document Server - Linux 内网环境配置
+# 
+# 适用场景:
+#   - 企业内网部署
+#   - 局域网访问
+#   - 无需域名和 SSL 证书
+#
+# 使用方法:
+#   HTTP:  docker-compose -f docker-compose.yml -f docker-compose.intranet.yml up -d
+#   HTTPS: docker-compose -f docker-compose.yml -f docker-compose.intranet.yml --profile https up -d
+#
+# 访问地址:
+#   ONLYOFFICE: http://<服务器IP>:${ONLYOFFICE_PORT}
+#   后端回调需配置为: http://<服务器IP>:${BACKEND_PORT}
+# ============================================
+
+version: '3.8'
+
+services:
+  onlyoffice:
+    # 端口映射 - 内网直接暴露端口
+    ports:
+      - "${ONLYOFFICE_PORT:-8080}:80"
+    
+    # 内网环境变量
+    environment:
+      # 允许私有 IP 访问（内网必需）
+      - ALLOW_PRIVATE_IP_ADDRESS=true
+      - ALLOW_META_IP_ADDRESS=true
+      
+      # 回调地址配置
+      # Linux 内网通常使用 host 网络模式或指定 IP
+      # 方式1: 使用宿主机 IP（推荐）
+      # 方式2: 使用 extra_hosts 映射
+    
+    # 添加宿主机映射（用于回调）
+    extra_hosts:
+      # Linux 下模拟 host.docker.internal
+      - "host.docker.internal:host-gateway"
+    
+    networks:
+      - onlyoffice_network
+
+  # -------------------- 可选: Nginx 反向代理（HTTP）--------------------
+  # 如需统一入口或负载均衡，取消注释以下配置
+  
+  # nginx-http:
+  #   image: nginx:alpine
+  #   container_name: onlyoffice-nginx-http
+  #   restart: unless-stopped
+  #   ports:
+  #     - "${NGINX_HTTP_PORT:-80}:80"
+  #   volumes:
+  #     - ../nginx/nginx.http.conf:/etc/nginx/nginx.conf:ro
+  #   depends_on:
+  #     - onlyoffice
+  #   networks:
+  #     - onlyoffice_network
+
+  # -------------------- 可选: Nginx 反向代理（HTTPS）--------------------
+  # 内网 HTTPS（自签名证书）
+  
+  # nginx-https:
+  #   image: nginx:alpine
+  #   container_name: onlyoffice-nginx-https
+  #   restart: unless-stopped
+  #   profiles:
+  #     - https
+  #   ports:
+  #     - "${NGINX_HTTPS_PORT:-443}:443"
+  #   volumes:
+  #     - ../nginx/nginx.https.conf:/etc/nginx/nginx.conf:ro
+  #     - ${SSL_CERT_PATH:-./certs/fullchain.pem}:/etc/nginx/ssl/fullchain.pem:ro
+  #     - ${SSL_KEY_PATH:-./certs/privkey.pem}:/etc/nginx/ssl/privkey.pem:ro
+  #   depends_on:
+  #     - onlyoffice
+  #   networks:
+  #     - onlyoffice_network
+
+networks:
+  onlyoffice_network:
+    driver: bridge
