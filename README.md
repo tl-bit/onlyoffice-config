@@ -1,6 +1,6 @@
 # ONLYOFFICE Document Server 生产环境部署方案
 
-## 📁 项目结构
+## 📁 项目结构~
 
 ```
 production-project/
